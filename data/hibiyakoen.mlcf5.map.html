@@ -1,0 +1,203 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <title>MLCF</title>
+
+    <style>
+      #disp_table { font-size:9pt; }
+      #position  { font-size:10pt; }
+      #count  { font-size:10pt; }
+    </style>
+
+    <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script> 
+    <script type="text/javascript" src="jquery-1.9.0.min.js"></script>
+
+    <script type="text/javascript">
+
+      var map;
+      var csvdata;
+      var table;
+      var polylines;
+      var select;
+
+      // initialize 
+      function initialize() {
+          var latlng = new google.maps.LatLng(35.626152,139.723911);
+
+          var opts = {
+              zoom: 16,
+              center: latlng,
+              mapTypeId: google.maps.MapTypeId.ROADMAP
+          };
+
+          map = new google.maps.Map(document.getElementById("map_canvas"), opts);
+
+					if (document.getElementById("triangle_info").value != "") {
+	          apply();
+	          pan(csvdata.length - 1)
+					}
+      }
+
+      function apply() {
+          csvdata = new Array();
+          polylines = new Array();
+          select = -1;
+
+          var csv = document.getElementById("triangle_info").value;
+          var lines = csv.split("\n");
+          for (var i = 0; i < lines.length - 1; i++) {
+              if (lines[i].length > 0) {
+                  csvdata[i] = lines[i].split("\t");
+              }
+          }
+          
+          // place table
+          table = document.createElement("table");
+          table.border = "1";
+          for (var i = 0; i < csvdata.length; i++) {
+
+              var td = document.createElement("td");
+              td.id = "node" + String(i)
+              var ln = document.createElement("a");
+              var tn = document.createTextNode(csvdata[i][0]);
+              ln.href = "javascript:pan(" + i + ")"
+              td.appendChild(ln);
+              ln.appendChild(tn)
+
+              var tr = document.createElement("tr");
+              tr.appendChild(td);
+              table.appendChild(tr);
+          }
+          document.getElementById("disp_table").appendChild(table);
+          
+          for (var i = 0; i < csvdata.length; i++) {
+              polylines[i] = new Array();
+              for (var j = 2; j < csvdata[i].length; j++) {
+                  var lineinfo = csvdata[i][j].split(",");
+                  var coords = [
+                      new google.maps.LatLng(lineinfo[0], lineinfo[1]),
+                      new google.maps.LatLng(lineinfo[2], lineinfo[3])
+                  ];
+                  polylines[i][j - 2] = new google.maps.Polyline({
+                      path: coords,
+                      strokeColor: '#FF0000',
+                      strokeOpacity: 0.5,
+                      strokeWeight: 1
+                  });
+              }
+          }
+          document.getElementById("count").innerText = csvdata.length;
+
+          var range_data = document.getElementById("map_range").value.split(",");
+          var coords = [ 
+              new google.maps.LatLng(range_data[0], range_data[1]), 
+              new google.maps.LatLng(range_data[2], range_data[1]), 
+              new google.maps.LatLng(range_data[2], range_data[3]), 
+              new google.maps.LatLng(range_data[0], range_data[3]), 
+              new google.maps.LatLng(range_data[0], range_data[1])
+          ]; 
+          rangerect = new google.maps.Polyline({ 
+              path: coords, 
+              strokeColor: '#FF0000', 
+              strokeOpacity: 0.5, 
+              strokeWeight: 1 
+          }); 
+          rangerect.setMap(map)
+      }
+      
+      function pan(index) {
+          if (select != -1) {
+              for (var j = 0; j < polylines[select].length; j++) {
+              	  polylines[select][j].setMap(null);
+              }
+	          table.rows[select].style.backgroundColor = 'white';
+          }
+
+          select = index;
+          document.getElementById("position").innerText = (select + 1);
+          table.rows[select].style.backgroundColor = 'lightgray';
+
+          var coordinfo = csvdata[select][1].split(",");
+          var latlng = new google.maps.LatLng(coordinfo[0], coordinfo[1]);
+          map.panTo(latlng);
+          
+          for (var j = 0; j < polylines[select].length; j++) {
+         	    polylines[select][j].setMap(map);
+          }
+          
+          var element = document.getElementById( "node" + String(index) ) ;
+          element.scrollIntoView(false);
+      }
+
+      function next() { 
+          if (select < csvdata.length - 1) {
+              pan(select + 1) 
+          }
+	    } 
+ 
+      function prev() { 
+          if (select > 0) {
+              pan(select - 1) 
+          }
+	    } 
+
+      function data_clear() {
+          document.getElementById("disp_table").removeChild(table);
+          
+          if (select != -1) {
+              for (var j = 0; j < polylines[select].length; j++) {
+              	  polylines[select][j].setMap(null);
+              }
+          }
+          
+          select <- -1
+
+          for (var i = 0; i < polylines.length; i++) {
+              for (var j = 0; j < polylines[i].length; j++) {
+                  delete polylines[i][j];
+              }
+              delete polylines[i];
+          }
+          delete polylines;
+          
+          delete csvdata;
+          
+          document.getElementById("triangle_info").value = "";
+          document.getElementById("triangle_info").focus();
+      }
+    </script>
+
+    <style type="text/css">
+	#info_area { width:500px; height:780px; float:left;  }
+	#disp_table { height:750px; overflow-y:scroll; }
+	#map_canvas { width:1060px; height:780px; float:left; }
+    </style>
+    
+  </head>
+
+  <body onload="javascript:initialize()">
+ 
+    <div id="info_area">
+	    <div id="input_area">
+          <textarea id="triangle_info">1 (48) イチョウ | Mosaic Wall | Exercise Equipment 	 35.673837,139.755936	 35.672188,139.754301,35.673279,139.758483	 35.673279,139.758483,35.675234,139.755520	 35.675234,139.755520,35.672188,139.754301	 397.496304,344.976790,355.525309
+2 (48) クスノキ | アメリカスズカケノキ | オブジェ	 35.673703,139.756503	 35.674985,139.758242,35.674662,139.755092	 35.674662,139.755092,35.670702,139.756754	 35.670702,139.756754,35.674985,139.758242	 287.420021,464.424466,493.937460
+</textarea>
+	    	<!--
+          <button id="apply" onclick="javascript:apply();">APPLY</button>
+          <button id="clear" onclick="javascript:data_clear();">CLEAR</button>
+        -->
+          <button id="prev" onclick="javascript:prev();">UP</button>
+          <button id="next" onclick="javascript:next();">DN</button>
+          <span id="position"></span>
+          <span id="count"></span>
+          <input type="hidden" id="map_range" value="35.670643,139.753071,35.676446,139.759604">
+	    </div>
+	    <div id="disp_table">
+	    </div>
+	</div>
+    <div id="map_canvas"></div>
+  </body>
+</html>
+
+
